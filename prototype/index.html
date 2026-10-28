@@ -1,0 +1,774 @@
+<title>Sorted Meal Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a single phone-sized app shell (header / scrolling body / sticky CTA), framed as a device on wide screens, full-bleed on phones. */
+:root {
+  --ground: #DDE8E3;
+  --bg: #F4F8F5;
+  --surface: #FFFFFF;
+  --surface-2: #E8F1EC;
+  --ink: #102E2A;
+  --muted: #587069;
+  --line: #D6E2DC;
+  --brand: #0A5C55;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #D3EBE5;
+  --sun: #F2B33D;
+  --sun-soft: #FCEFD2;
+  --protein: #0A5C55;
+  --carbs: #DE9425;
+  --fat: #D65E4A;
+  --warn: #A85A14;
+  --warn-soft: #FBEADA;
+  --ok: #2B8553;
+  --frame: #12221F;
+  --shadow: 0 1px 2px rgba(16,46,42,.06), 0 6px 18px rgba(16,46,42,.07);
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #070F0E; --bg: #0F1C1A; --surface: #162725; --surface-2: #1C312E; --ink: #E5EFEB; --muted: #93A9A2; --line: #284340;
+    --brand: #4DBFB0; --brand-ink: #05211D; --brand-soft: #173D38; --sun: #F2B33D; --sun-soft: #3A2E15;
+    --protein: #4DBFB0; --carbs: #E9AA42; --fat: #EC7C6B; --warn: #ECA35C; --warn-soft: #3A2817; --ok: #5DC58B; --frame: #000000;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #070F0E; --bg: #0F1C1A; --surface: #162725; --surface-2: #1C312E; --ink: #E5EFEB; --muted: #93A9A2; --line: #284340;
+  --brand: #4DBFB0; --brand-ink: #05211D; --brand-soft: #173D38; --sun: #F2B33D; --sun-soft: #3A2E15;
+  --protein: #4DBFB0; --carbs: #E9AA42; --fat: #EC7C6B; --warn: #ECA35C; --warn-soft: #3A2817; --ok: #5DC58B; --frame: #000000;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+p { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+.stage { min-height: 100%; display: grid; place-items: center; padding-block: 24px; }
+.device {
+  position: relative; width: 390px; height: min(844px, calc(100vh - 48px)); min-height: 640px;
+  background: var(--bg); border-radius: 46px; border: 10px solid var(--frame);
+  box-shadow: 0 30px 80px rgba(10,40,35,.25); overflow: hidden; display: flex; flex-direction: column;
+}
+@media (max-width: 560px) {
+  .stage { padding-block: 0; display: block; height: 100%; }
+  .device { width: 100%; height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
+
+.gutter { padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+.top { display: flex; align-items: center; gap: 10px; padding-block: 16px 10px; min-height: 58px; }
+.top h2 { font-size: 17px; font-weight: 600; flex: 1; }
+.back { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); box-shadow: var(--shadow); flex: none; }
+.back svg { width: 18px; height: 18px; }
+.steps { display: flex; gap: 5px; }
+.steps i { width: 18px; height: 5px; border-radius: 3px; background: var(--line); }
+.steps i.on { background: var(--brand); }
+.scroll { flex: 1; overflow-y: auto; padding-block: 4px 24px; display: flex; flex-direction: column; gap: 14px; }
+.cta { padding-block: 12px 18px; background: linear-gradient(to top, var(--bg) 70%, transparent); display: flex; flex-direction: column; gap: 8px; }
+.btn { width: 100%; height: 52px; border-radius: 26px; background: var(--brand); color: var(--brand-ink); font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .15s, opacity .15s; }
+.btn:active { transform: scale(.98); }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--brand); height: 40px; font-size: 15px; }
+.hint { font-size: 13px; color: var(--muted); text-align: center; }
+
+.lede h1 { font-size: 28px; font-weight: 800; line-height: 1.1; }
+.lede p { color: var(--muted); margin-top: 6px; }
+.label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.card { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.grow { flex: 1; min-width: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+/* Welcome */
+.welcome { background: var(--brand); color: var(--brand-ink); flex: 1; display: flex; flex-direction: column; padding-block: 40px 20px; gap: 22px; overflow-y: auto; }
+.wordmark { font-family: var(--display); font-weight: 800; font-size: 22px; display: flex; align-items: center; gap: 8px; }
+.wordmark b { width: 30px; height: 30px; border-radius: 9px; background: var(--sun); color: #3A2600; display: grid; place-items: center; font-size: 18px; }
+.welcome h1 { font-size: 40px; font-weight: 800; line-height: 1.02; }
+.welcome p { opacity: .85; font-size: 16px; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.compare div { background: rgba(255,255,255,.1); border-radius: 18px; padding: 14px; }
+.compare strong { font-family: var(--display); font-size: 30px; display: block; line-height: 1.1; }
+.compare .after { background: var(--sun); color: #3A2600; }
+.chain { display: flex; flex-wrap: wrap; gap: 6px; }
+.chain span { font-size: 12.5px; padding: 5px 10px; border-radius: 20px; background: rgba(255,255,255,.12); }
+.welcome .btn { background: var(--sun); color: #3A2600; }
+.proto { font-size: 12px; opacity: .7; text-align: center; }
+
+/* Form bits */
+.stepper { display: flex; align-items: center; gap: 14px; }
+.stepper button { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); font-size: 22px; font-weight: 600; }
+.stepper strong { font-family: var(--display); font-size: 26px; min-width: 24px; text-align: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--line); font-weight: 600; font-size: 14px; background: var(--surface); }
+.chip.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.option { display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%; padding: 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); }
+.option.on { border-color: var(--brand); background: var(--brand-soft); }
+.option[disabled] { opacity: .5; cursor: not-allowed; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); flex: none; margin-top: 1px; display: grid; place-items: center; }
+.option.on .radio { border-color: var(--brand); }
+.option.on .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--brand); }
+.option strong { display: block; font-weight: 700; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--sun-soft); color: var(--warn); margin-left: 6px; vertical-align: 1px; }
+.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.preset { text-align: left; padding: 14px; border-radius: 18px; border: 1.5px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 2px; }
+.preset.on { border-color: var(--brand); background: var(--brand-soft); }
+.preset strong { font-family: var(--display); font-size: 17px; }
+.targets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.target { background: var(--surface-2); border-radius: 14px; padding: 10px 6px; text-align: center; }
+.target input { width: 100%; border: 0; background: transparent; text-align: center; font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--ink); padding: 0; }
+.target input:disabled { opacity: 1; -webkit-text-fill-color: var(--ink); }
+.target span { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.connect { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); width: 100%; text-align: left; }
+.connect.on { border-color: var(--ok); }
+.logo { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-family: var(--display); color: #fff; flex: none; font-size: 15px; }
+.state { font-size: 13px; font-weight: 700; color: var(--brand); }
+.connect.on .state { color: var(--ok); }
+.stores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.store { padding: 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; text-align: left; }
+.store.on { border-color: var(--brand); background: var(--brand-soft); }
+
+/* Loading */
+.loading { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; padding-block: 40px; }
+.pulse { width: 76px; height: 76px; border-radius: 24px; background: var(--brand); display: grid; place-items: center; animation: breathe 1.4s ease-in-out infinite; }
+.pulse svg { width: 36px; height: 36px; color: var(--brand-ink); }
+@keyframes breathe { 50% { transform: scale(1.08); } }
+.tasks { display: flex; flex-direction: column; gap: 14px; }
+.task { display: flex; gap: 12px; align-items: flex-start; opacity: .35; transition: opacity .3s; }
+.task.done, .task.now { opacity: 1; }
+.tick { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; }
+.task.done .tick { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.task.done .tick::after { content: "✓"; font-size: 13px; font-weight: 800; }
+.task strong { display: block; }
+
+/* Week */
+.day { display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left; background: var(--surface); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+.date { width: 46px; flex: none; text-align: center; }
+.date b { display: block; font-family: var(--display); font-size: 22px; line-height: 1; }
+.date span { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 12px; }
+.pill.cook { background: var(--brand-soft); color: var(--brand); }
+.pill.quick { background: var(--sun-soft); color: var(--warn); }
+.pill.out, .pill.away { background: var(--surface-2); color: var(--muted); }
+.event { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-top: 6px; }
+.event svg { width: 13px; height: 13px; flex: none; }
+.why { font-size: 14px; margin-top: 6px; }
+.edit { font-size: 12px; font-weight: 700; color: var(--brand); flex: none; align-self: center; }
+.day.off { background: var(--surface-2); box-shadow: none; }
+.summary { display: flex; gap: 8px; }
+.summary div { flex: 1; background: var(--surface); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow); }
+.summary strong { font-family: var(--display); font-size: 22px; display: block; line-height: 1.1; }
+
+/* Plan */
+.score { background: var(--brand); color: var(--brand-ink); border-radius: 22px; padding: 16px; display: flex; gap: 16px; align-items: center; }
+.score h3 { font-size: 20px; }
+.score .ring-label { color: var(--brand-ink); }
+.score .ring-track { stroke: rgba(255,255,255,.2); }
+.bars { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.bar { display: grid; grid-template-columns: 52px 1fr 70px; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+.bar i { height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); overflow: hidden; display: block; }
+.bar i b { display: block; height: 100%; border-radius: 3px; background: var(--sun); }
+.bar span:last-child { text-align: right; }
+.meal { background: var(--surface); border-radius: 20px; padding: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center; }
+.thumb { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font-size: 32px; flex: none; }
+.meal h3 { font-size: 16px; font-weight: 600; line-height: 1.2; }
+.daylabel { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.macros { display: flex; gap: 10px; font-size: 12.5px; margin-top: 4px; flex-wrap: wrap; }
+.macros span { display: inline-flex; align-items: center; gap: 4px; }
+.macros i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.swapbtn { font-size: 13px; font-weight: 700; color: var(--brand); padding: 6px 12px; border-radius: 14px; background: var(--brand-soft); margin-top: 8px; }
+.ring-track { stroke: var(--surface-2); }
+.ring-label { font-family: var(--display); font-weight: 800; fill: currentColor; }
+.offday { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; background: var(--surface-2); font-size: 13.5px; color: var(--muted); }
+.staples { display: flex; flex-direction: column; gap: 8px; }
+.staple { display: flex; justify-content: space-between; font-size: 14px; }
+
+/* List */
+.reason { font-size: 12.5px; color: var(--muted); }
+.have { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.have:first-of-type { border-top: 0; }
+.toggle { display: flex; background: var(--surface-2); border-radius: 14px; padding: 3px; flex: none; }
+.toggle button { font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 11px; color: var(--muted); }
+.toggle button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.item:first-of-type { border-top: 0; }
+.item .qty { font-weight: 700; font-variant-numeric: tabular-nums; }
+.check { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line); flex: none; display: grid; place-items: center; }
+.item.got .check { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.item.got .check::after { content: "✓"; font-size: 13px; font-weight: 800; }
+.item.got .grow, .item.got .qty { opacity: .45; text-decoration: line-through; }
+.aisle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+
+/* Basket */
+.progress { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.progress b { display: block; height: 100%; background: var(--brand); width: 0; transition: width .2s; }
+.line { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.line:first-child { border-top: 0; }
+.line.hide { display: none; }
+.line.pop { animation: pop .35s ease-out; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+.dot { width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center; font-size: 17px; background: var(--surface-2); }
+.price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.flag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 8px; margin-left: 4px; vertical-align: 1px; }
+.flag.oos { background: var(--warn-soft); color: var(--warn); }
+.flag.sub { background: var(--brand-soft); color: var(--brand); }
+.flag.new { background: var(--sun-soft); color: var(--warn); }
+.decision { border-radius: 20px; padding: 16px; background: var(--warn-soft); display: flex; flex-direction: column; gap: 10px; }
+.decision h3 { font-size: 16px; font-weight: 600; }
+.decision .opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.mini { height: 38px; padding: 0 16px; border-radius: 19px; font-weight: 700; font-size: 14px; background: var(--brand); color: var(--brand-ink); }
+.mini.alt { background: var(--surface); color: var(--ink); }
+.compare-meal { display: flex; gap: 10px; align-items: center; background: var(--surface); border-radius: 14px; padding: 10px; }
+.compare-meal .thumb { width: 44px; height: 44px; font-size: 22px; border-radius: 12px; }
+.delta { font-size: 12.5px; font-weight: 600; }
+.delta .good { color: var(--ok); }
+.totals { display: flex; justify-content: space-between; align-items: baseline; }
+.totals strong { font-family: var(--display); font-size: 26px; }
+
+/* Slots */
+.rec { background: var(--brand-soft); border-radius: 18px; padding: 14px; display: flex; gap: 12px; }
+.rec svg { width: 22px; height: 22px; color: var(--brand); flex: none; margin-top: 2px; }
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.slot { border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 1px; }
+.slot strong { font-variant-numeric: tabular-nums; }
+.slot small { font-size: 12px; color: var(--muted); }
+.slot.on { border-color: var(--brand); background: var(--brand-soft); }
+.slot.full { opacity: .45; cursor: not-allowed; }
+.slot.busy small, .slot.late small { color: var(--warn); }
+.slot .star { font-size: 11px; font-weight: 800; color: var(--brand); }
+
+/* Done */
+.done-hero { background: var(--brand); color: var(--brand-ink); border-radius: 26px; padding: 22px 18px; display: flex; flex-direction: column; gap: 8px; }
+.done-hero .big { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: 1; color: var(--sun); }
+.weekrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.weekrow:first-child { border-top: 0; }
+.weekrow b { width: 38px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stats div { background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); }
+.stats strong { font-family: var(--display); font-size: 20px; display: block; }
+
+/* Sheet + toast */
+.scrim { position: absolute; inset: 0; background: rgba(5,20,18,.45); z-index: 20; display: flex; align-items: flex-end; animation: fade .2s; }
+@keyframes fade { from { opacity: 0; } }
+.sheet { background: var(--bg); width: 100%; border-radius: 26px 26px 0 0; padding-block: 10px 22px; display: flex; flex-direction: column; gap: 12px; max-height: 80%; overflow-y: auto; animation: rise .25s ease-out; }
+@keyframes rise { from { transform: translateY(40px); opacity: .5; } }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); align-self: center; }
+.sheet h3 { font-size: 20px; }
+.toast { position: absolute; left: 18px; right: 18px; bottom: 96px; background: var(--ink); color: var(--bg); border-radius: 16px; padding: 12px 14px; font-size: 14px; font-weight: 600; z-index: 30; animation: rise .25s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="stage"><div class="device" id="app"></div></div>
+
+<script>
+/* ---------- Sample data (golden run) ---------- */
+const PRESETS = {
+  high:     { name: 'High protein', desc: 'Build or keep muscle', k: 2100, p: 150, f: 70, c: 200 },
+  balanced: { name: 'Balanced', desc: 'Steady, everyday eating', k: 2200, p: 120, f: 75, c: 250 },
+  cut:      { name: 'Cut', desc: 'Lose fat, keep protein up', k: 1800, p: 145, f: 55, c: 170 },
+  custom:   { name: 'Custom', desc: 'Set your own numbers', k: 2100, p: 150, f: 70, c: 200 }
+};
+const DIETS = ['Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Dairy-free', 'Nut-free'];
+
+// Recipes are per serving. tags: meat | fish | veg, plus gluten / dairy / nuts / vegan.
+const RECIPES = {
+  fajita:   { name: 'Chicken fajita bowl', e: '🌯', tint: '#F8DCC4', mins: 25, tags: ['meat','dairy'], prot: 'chicken', m: { k: 640, p: 54, f: 19, c: 62 },
+              ing: [['chicken breast',220,'g'],['peppers',1,'x'],['red onion',.5,'x'],['basmati rice',75,'g'],['avocado',.5,'x'],['lime',.5,'x'],['greek yoghurt',50,'g'],['fajita seasoning',1,'tsp']] },
+  prawn:    { name: 'Chilli garlic prawn noodles', e: '🍜', tint: '#FBE3B5', mins: 15, tags: ['fish','gluten'], prot: 'prawn', m: { k: 560, p: 46, f: 14, c: 58 },
+              ing: [['king prawns',180,'g'],['egg noodles',75,'g'],['pak choi',1,'x'],['garlic',2,'clove'],['red chilli',1,'x'],['soy sauce',1,'tbsp']] },
+  salmon:   { name: 'Miso salmon & greens', e: '🐟', tint: '#F9D3CB', mins: 25, tags: ['fish'], prot: 'salmon', m: { k: 610, p: 48, f: 27, c: 44 },
+              ing: [['salmon fillets',1,'x'],['tenderstem broccoli',120,'g'],['miso paste',15,'g'],['basmati rice',75,'g'],['spring onions',2,'x']] },
+  chilli:   { name: 'Beef & black bean chilli', e: '🌶️', tint: '#F5CFC2', mins: 40, tags: ['meat'], prot: 'beef', m: { k: 650, p: 55, f: 21, c: 60 },
+              ing: [['lean beef mince',200,'g'],['black beans',.5,'tin'],['chopped tomatoes',.5,'tin'],['red onion',.5,'x'],['peppers',1,'x'],['basmati rice',70,'g'],['chilli powder',1,'tsp']] },
+  turkey:   { name: 'Turkey meatballs & tomato orzo', e: '🍝', tint: '#F7D9BF', mins: 30, tags: ['meat','gluten','dairy'], prot: 'turkey', m: { k: 620, p: 53, f: 17, c: 64 },
+              ing: [['turkey mince',200,'g'],['orzo',75,'g'],['chopped tomatoes',.5,'tin'],['spinach',50,'g'],['garlic',1,'clove'],['parmesan',15,'g']] },
+  harissa:  { name: 'Harissa chicken & couscous', e: '🥘', tint: '#F8D8C0', mins: 25, tags: ['meat','gluten','dairy'], prot: 'chicken', m: { k: 600, p: 50, f: 16, c: 58 },
+              ing: [['chicken breast',200,'g'],['couscous',70,'g'],['harissa paste',20,'g'],['courgette',1,'x'],['greek yoghurt',50,'g']] },
+  cod:      { name: 'Cod with chorizo & butter beans', e: '🐠', tint: '#DCE9F2', mins: 20, tags: ['meat','fish'], prot: 'cod', m: { k: 560, p: 49, f: 20, c: 40 },
+              ing: [['cod fillets',1,'x'],['chorizo',30,'g'],['butter beans',.5,'tin'],['spinach',60,'g'],['garlic',1,'clove']] },
+  tofu:     { name: 'Crispy tofu peanut stir-fry', e: '🥢', tint: '#E6EBC8', mins: 20, tags: ['veg','vegan','nuts'], prot: 'tofu', m: { k: 610, p: 36, f: 26, c: 56 },
+              ing: [['tofu',200,'g'],['rice noodles',75,'g'],['peppers',1,'x'],['peanut butter',20,'g'],['soy sauce',1,'tbsp']] },
+  halloumi: { name: 'Halloumi & chickpea traybake', e: '🧀', tint: '#F6E7B8', mins: 35, tags: ['veg','dairy'], prot: 'halloumi', m: { k: 650, p: 34, f: 30, c: 55 },
+              ing: [['halloumi',100,'g'],['chickpeas',.5,'tin'],['peppers',1,'x'],['red onion',.5,'x'],['olive oil',1,'tbsp']] },
+  quesadilla:{ name: 'Black bean & feta quesadillas', e: '🫓', tint: '#EFE0C6', mins: 15, tags: ['veg','gluten','dairy'], prot: 'beans', m: { k: 590, p: 32, f: 22, c: 62 },
+              ing: [['wholemeal wraps',2,'x'],['black beans',.5,'tin'],['feta',40,'g'],['peppers',.5,'x'],['spinach',40,'g']] },
+  dal:      { name: 'Red lentil & coconut dal', e: '🍛', tint: '#F7E1B0', mins: 30, tags: ['veg','vegan'], prot: 'lentils', m: { k: 580, p: 30, f: 18, c: 72 },
+              ing: [['red lentils',90,'g'],['coconut milk',.5,'tin'],['spinach',60,'g'],['garlic',2,'clove'],['basmati rice',60,'g'],['curry paste',15,'g']] },
+  lemon:    { name: 'Lemon & herb chicken traybake', e: '🍋', tint: '#F6EDB5', mins: 35, tags: ['meat'], prot: 'chicken', m: { k: 590, p: 52, f: 20, c: 46 },
+              ing: [['chicken thighs',250,'g'],['new potatoes',200,'g'],['courgette',1,'x'],['lemon',1,'x'],['garlic',2,'clove'],['olive oil',1,'tbsp']] }
+};
+// Planner preference order. Lemon chicken sits last so it is free for the salmon meal swap.
+const ORDER = ['fajita','prawn','salmon','chilli','turkey','harissa','cod','tofu','halloumi','quesadilla','dal','lemon'];
+
+const STAPLES = { // per day at home, per person
+  items: [['rolled oats',60,'g'],['greek yoghurt',150,'g'],['frozen berries',60,'g'],['wholemeal wraps',1,'x'],['eggs',2,'x'],['spinach',30,'g'],['bananas',1,'x']],
+  meals: [['Overnight oats, yoghurt & berries', 440, 35], ['Egg & spinach wrap', 500, 40], ['Banana & yoghurt', 240, 20]],
+  m: { k: 1180, p: 95, f: 30, c: 128 }
+};
+
+const DAYS = [
+  { k: 'mon', d: 'Mon', n: 2, ev: 'Gym · 7:00am', st: 'cook', why: 'Free evening after the gym, so a full cook night.' },
+  { k: 'tue', d: 'Tue', n: 3, ev: 'Client review until 8:00pm', st: 'quick', why: 'Late meeting until 8pm, so a dinner that takes 20 minutes or less.' },
+  { k: 'wed', d: 'Wed', n: 4, ev: null, st: 'cook', why: 'Nothing in the diary after 6pm.' },
+  { k: 'thu', d: 'Thu', n: 5, ev: 'Team drinks · 7:00pm', st: 'out', why: 'You have team drinks at 7pm, so no dinner planned.' },
+  { k: 'fri', d: 'Fri', n: 6, ev: 'Working from home', st: 'cook', why: 'Working from home, so there is time for a slower recipe.' },
+  { k: 'sat', d: 'Sat', n: 7, ev: 'Brighton with Sam · staying over', st: 'away', why: 'Away overnight in Brighton. Nothing planned, no staples bought for today.' },
+  { k: 'sun', d: 'Sun', n: 8, ev: 'Train home · arrives 4:45pm', st: 'cook', why: 'Back home before 5pm, with time for a proper dinner.' }
+];
+const STATUS = { cook: 'Cooking', quick: 'Quick meal', out: 'Eating out', away: 'Away' };
+
+const AISLES = { 'Fruit & veg': '🥬', 'Meat & fish': '🥩', 'Dairy & eggs': '🥚', 'Cupboard': '🥫', 'Frozen': '🧊' };
+// Mock store catalogue: product, pack size, unit, price, aisle.
+const CAT = {
+  'chicken breast': ['Chicken breast fillets 300g', 300, 'g', 3.65, 'Meat & fish'],
+  'chicken thighs': ['Boneless chicken thighs 500g', 500, 'g', 3.60, 'Meat & fish'],
+  'king prawns': ['Raw king prawns 180g', 180, 'g', 3.50, 'Meat & fish'],
+  'salmon fillets': ['Skin-on salmon fillets 2pk', 2, 'x', 4.50, 'Meat & fish'],
+  'lean beef mince': ['5% fat beef mince 500g', 500, 'g', 4.35, 'Meat & fish'],
+  'turkey mince': ['Turkey breast mince 500g', 500, 'g', 3.95, 'Meat & fish'],
+  'cod fillets': ['Cod fillets 2pk', 2, 'x', 4.75, 'Meat & fish'],
+  'chorizo': ['Chorizo ring 225g', 225, 'g', 2.50, 'Meat & fish'],
+  'peppers': ['Mixed peppers 3pk', 3, 'x', 1.10, 'Fruit & veg'],
+  'red onion': ['Red onions 3pk', 3, 'x', 0.85, 'Fruit & veg'],
+  'avocado': ['Ripe & ready avocado', 1, 'x', 0.89, 'Fruit & veg'],
+  'lime': ['Limes 3pk', 3, 'x', 0.70, 'Fruit & veg'],
+  'pak choi': ['Pak choi 2pk', 2, 'x', 1.15, 'Fruit & veg'],
+  'garlic': ['Garlic bulb', 10, 'clove', 0.35, 'Fruit & veg'],
+  'red chilli': ['Red chillies 4pk', 4, 'x', 0.60, 'Fruit & veg'],
+  'tenderstem broccoli': ['Tenderstem broccoli 200g', 200, 'g', 1.75, 'Fruit & veg'],
+  'spring onions': ['Spring onions bunch', 8, 'x', 0.60, 'Fruit & veg'],
+  'spinach': ['Baby spinach 240g', 240, 'g', 1.40, 'Fruit & veg'],
+  'courgette': ['Courgette', 1, 'x', 0.45, 'Fruit & veg'],
+  'lemon': ['Unwaxed lemons 4pk', 4, 'x', 1.00, 'Fruit & veg'],
+  'new potatoes': ['Baby new potatoes 1kg', 1000, 'g', 1.05, 'Fruit & veg'],
+  'bananas': ['Bananas 5pk', 5, 'x', 0.85, 'Fruit & veg'],
+  'greek yoghurt': ['0% Greek-style yoghurt 1kg', 1000, 'g', 2.25, 'Dairy & eggs'],
+  'parmesan': ['Parmigiano Reggiano 100g', 100, 'g', 2.25, 'Dairy & eggs'],
+  'halloumi': ['Halloumi 225g', 225, 'g', 2.60, 'Dairy & eggs'],
+  'feta': ['Greek feta 200g', 200, 'g', 1.90, 'Dairy & eggs'],
+  'eggs': ['Large free-range eggs 12pk', 12, 'x', 3.10, 'Dairy & eggs'],
+  'tofu': ['Extra firm tofu 280g', 280, 'g', 2.00, 'Dairy & eggs'],
+  'basmati rice': ['Basmati rice 1kg', 1000, 'g', 2.20, 'Cupboard'],
+  'egg noodles': ['Medium egg noodles 300g', 300, 'g', 0.95, 'Cupboard'],
+  'rice noodles': ['Rice noodles 250g', 250, 'g', 1.30, 'Cupboard'],
+  'miso paste': ['White miso paste 100g', 100, 'g', 2.00, 'Cupboard'],
+  'black beans': ['Black beans 400g tin', 1, 'tin', 0.75, 'Cupboard'],
+  'chopped tomatoes': ['Chopped tomatoes 400g tin', 1, 'tin', 0.45, 'Cupboard'],
+  'butter beans': ['Butter beans 400g tin', 1, 'tin', 0.65, 'Cupboard'],
+  'chickpeas': ['Chickpeas 400g tin', 1, 'tin', 0.65, 'Cupboard'],
+  'coconut milk': ['Light coconut milk 400ml', 1, 'tin', 1.05, 'Cupboard'],
+  'orzo': ['Orzo pasta 500g', 500, 'g', 1.25, 'Cupboard'],
+  'couscous': ['Couscous 500g', 500, 'g', 0.95, 'Cupboard'],
+  'harissa paste': ['Rose harissa paste 95g', 95, 'g', 1.95, 'Cupboard'],
+  'peanut butter': ['Smooth peanut butter 340g', 340, 'g', 1.85, 'Cupboard'],
+  'red lentils': ['Red split lentils 500g', 500, 'g', 1.10, 'Cupboard'],
+  'curry paste': ['Madras curry paste 283g', 283, 'g', 1.80, 'Cupboard'],
+  'rolled oats': ['Rolled porridge oats 1kg', 1000, 'g', 1.30, 'Cupboard'],
+  'wholemeal wraps': ['Wholemeal tortilla wraps 8pk', 8, 'x', 1.45, 'Cupboard'],
+  'fajita seasoning': ['Fajita seasoning 30g', 1, 'tsp', 0.85, 'Cupboard'],
+  'soy sauce': ['Light soy sauce 150ml', 1, 'tbsp', 1.10, 'Cupboard'],
+  'chilli powder': ['Mild chilli powder 46g', 1, 'tsp', 0.95, 'Cupboard'],
+  'olive oil': ['Olive oil 500ml', 1, 'tbsp', 4.50, 'Cupboard'],
+  'frozen berries': ['Frozen mixed berries 500g', 500, 'g', 2.10, 'Frozen']
+};
+const PANTRY = ['fajita seasoning','soy sauce','chilli powder','olive oil'];
+const HISTORY = { 'basmati rice': 'You bought 1kg 5 days ago', 'garlic': 'You bought a bulb 6 days ago', 'rolled oats': 'You bought 1kg 9 days ago' };
+// Out-of-stock items in the mock store, with what the planner does about each.
+const OOS = {
+  'greek yoghurt': { kind: 'ask', prod: 'Icelandic-style skyr 450g', size: 450, price: 1.55, why: 'Skyr has the same protein (10g per 100g) and slightly less fat.' },
+  'wholemeal wraps': { kind: 'auto', prod: 'Seeded wholemeal wraps 8pk', size: 8, price: 1.60, why: 'Same size and macros, swapped automatically.' },
+  'salmon fillets': { kind: 'meal' }
+};
+const SLOTS = [
+  { day: 'Sat 31 Oct', ev: 'Halloween party from 7pm', s: [['10–11am', 4.50], ['2–3pm', 3.00], ['6–7pm', 1.50, 'busy', "You're out"], ['8–9pm', 1.50, 'busy', "You're out"]] },
+  { day: 'Sun 1 Nov', ev: 'Nothing booked', s: [['10–11am', 5.00, 'full', 'Fully booked'], ['2–3pm', 3.50], ['6–7pm', 3.50, 'rec', 'Recommended'], ['8–9pm', 2.00]] },
+  { day: 'Mon 2 Nov', ev: 'Office 9am–6pm', s: [['10–11am', 1.00, 'busy', "You're at work"], ['2–3pm', 1.00, 'busy', "You're at work"], ['6–7pm', 4.00, 'late', 'After you start cooking'], ['8–9pm', 2.50, 'late', 'After dinner']] }
+];
+const STORES = [['Tesco', '#00539F'], ['ASDA', '#68A51C'], ["Sainsbury's", '#F06C00'], ['Ocado', '#6E2C6B']];
+
+/* ---------- State ---------- */
+const fresh = () => ({
+  screen: 'welcome', household: 1, meals: 'staples', diet: [], preset: 'high', custom: { ...PRESETS.custom },
+  cal: null, store: null,
+  status: Object.fromEntries(DAYS.map(d => [d.k, d.st])), why: Object.fromEntries(DAYS.map(d => [d.k, d.why])),
+  plan: {}, have: {}, got: {}, yog: null, swapped: null, slot: 'Sun 1 Nov|6–7pm', sheet: null, filled: false, newItems: []
+});
+let S = fresh();
+
+/* ---------- Logic: planning, merging, basket ---------- */
+const targets = () => S.preset === 'custom' ? S.custom : PRESETS[S.preset];
+const cooking = k => S.status[k] === 'cook' || S.status[k] === 'quick';
+const dietOk = r => {
+  const t = r.tags, d = S.diet;
+  if (d.includes('Vegan') && !t.includes('vegan')) return false;
+  if (d.includes('Vegetarian') && !t.includes('veg')) return false;
+  if (d.includes('Pescatarian') && t.includes('meat')) return false;
+  if (d.includes('Gluten-free') && t.includes('gluten')) return false;
+  if (d.includes('Dairy-free') && t.includes('dairy')) return false;
+  if (d.includes('Nut-free') && t.includes('nuts')) return false;
+  return true;
+};
+const fits = (id, k) => dietOk(RECIPES[id]) && (S.status[k] !== 'quick' || RECIPES[id].mins <= 20) && !(S.swapped && id === 'salmon');
+
+function fillPlan() {
+  for (const d of DAYS) if (!cooking(d.k) || (S.plan[d.k] && !fits(S.plan[d.k], d.k))) delete S.plan[d.k];
+  let prev = null;
+  for (const d of DAYS) {
+    if (!cooking(d.k)) continue;
+    if (!S.plan[d.k]) {
+      const used = new Set(Object.values(S.plan));
+      const pool = ORDER.filter(id => fits(id, d.k));
+      S.plan[d.k] = pool.find(id => !used.has(id) && RECIPES[id].prot !== prev && id !== 'lemon')
+                 || pool.find(id => !used.has(id)) || pool[0] || null;
+      if (!S.plan[d.k]) delete S.plan[d.k];
+    }
+    prev = S.plan[d.k] ? RECIPES[S.plan[d.k]].prot : null;
+  }
+}
+const homeDays = () => DAYS.filter(d => S.status[d.k] !== 'away').length;
+function dayMacros(k) {
+  const m = { k: 0, p: 0, f: 0, c: 0 };
+  const add = x => { for (const key in m) m[key] += x[key]; };
+  if (S.meals === 'staples' && S.status[k] !== 'away') add(STAPLES.m);
+  if (S.plan[k]) add(RECIPES[S.plan[k]].m);
+  return m;
+}
+function weekScore() {
+  const t = targets(), days = DAYS.filter(d => S.plan[d.k]);
+  if (!days.length) return { p: 0, k: 0, f: 0, c: 0, n: 0, over: 0 };
+  const avg = key => days.reduce((s, d) => s + dayMacros(d.k)[key], 0) / days.length;
+  return { p: avg('p'), k: avg('k'), f: avg('f'), c: avg('c'), n: days.length, over: days.filter(d => dayMacros(d.k).f > t.f).length };
+}
+function listItems() {
+  const map = {}, n = S.household;
+  const add = (name, q, u, use) => {
+    map[name] = map[name] || { name, q: 0, u, uses: new Set() };
+    map[name].q += q * n; map[name].uses.add(use);
+  };
+  for (const d of DAYS) if (S.plan[d.k]) for (const [name, q, u] of RECIPES[S.plan[d.k]].ing) add(name, q, u, d.d);
+  if (S.meals === 'staples') for (const [name, q, u] of STAPLES.items) add(name, q * homeDays(), u, 'Staples');
+  return Object.values(map).map(i => {
+    i.aisle = CAT[i.name][4];
+    i.reason = PANTRY.includes(i.name) ? 'Pantry basic' : HISTORY[i.name] || null;
+    return i;
+  });
+}
+const hasIt = i => i.reason ? S.have[i.name] !== false : false;
+function basket() {
+  const lines = [];
+  for (const i of listItems()) {
+    if (hasIt(i) || S.got[i.name]) continue;
+    const [prod, size, , price, aisle] = CAT[i.name];
+    const packs = ['tsp','tbsp'].includes(i.u) ? 1 : Math.ceil(i.q / size - 1e-9);
+    const o = OOS[i.name];
+    const line = { name: i.name, prod, packs, price, aisle, state: 'ok' };
+    if (o && o.kind === 'auto') Object.assign(line, { prod: o.prod, price: o.price, state: 'auto', note: o.why });
+    if (o && o.kind === 'ask') {
+      if (S.yog === 'sub') Object.assign(line, { prod: o.prod, price: o.price, packs: Math.ceil(i.q / o.size), state: 'subbed', note: o.why });
+      else if (S.yog === 'skip') continue;
+      else line.state = 'pending';
+    }
+    if (o && o.kind === 'meal') line.state = 'pending';
+    if (S.newItems.includes(i.name)) line.fresh = true;
+    lines.push(line);
+  }
+  const order = Object.keys(AISLES);
+  lines.sort((a, b) => order.indexOf(a.aisle) - order.indexOf(b.aisle));
+  return lines;
+}
+const total = lines => lines.filter(l => l.state !== 'pending').reduce((s, l) => s + l.price * l.packs, 0);
+const salmonDay = () => DAYS.find(d => S.plan[d.k] === 'salmon');
+function swapTarget(k) {
+  const used = new Set(Object.values(S.plan)), cur = RECIPES[S.plan[k]];
+  return ORDER.filter(id => fits(id, k) && !used.has(id) && !RECIPES[id].tags.includes('fish') || id === 'lemon' && fits(id, k) && !used.has(id))
+    .sort((a, b) => Math.abs(RECIPES[a].m.p - cur.m.p) - Math.abs(RECIPES[b].m.p - cur.m.p))[0];
+}
+
+/* ---------- Formatting ---------- */
+const FR = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+const frac = q => { const w = Math.floor(q), r = Math.round((q - w) * 100) / 100; return r ? (w || '') + (FR[r] || r.toString().slice(1)) : String(w); };
+function qty(q, u) {
+  if (u === 'g') return q >= 1000 ? (q / 1000).toFixed(2).replace(/\.?0+$/, '') + 'kg' : Math.round(q) + 'g';
+  if (u === 'x') return '× ' + frac(q);
+  if (u === 'tin') return frac(q) + (q > 1 ? ' tins' : ' tin');
+  if (u === 'clove') return q + (q === 1 ? ' clove' : ' cloves');
+  return q + ' ' + u;
+}
+const gbp = n => '£' + n.toFixed(2);
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const ICON = {
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>'
+};
+function ring(pct, size, stroke, color, label) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, pct));
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none" aria-label="${Math.round(pct * 100)}% of target">
+    <circle class="ring-track" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${c * p} ${c}" transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text class="ring-label" x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size * .26}">${label}</text></svg>`;
+}
+
+/* ---------- Screens ---------- */
+const header = (title, back, step) => `<div class="top gutter">
+  ${back ? `<button class="back" data-a="go" data-to="${back}" aria-label="Back">${ICON.back}</button>` : ''}
+  <h2>${title}</h2>${step ? `<div class="steps">${[1,2,3].map(i => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`;
+const cta = (label, to, opts = {}) => `<div class="cta gutter">${opts.above || ''}
+  <button class="btn" data-a="${opts.action || 'go'}" data-to="${to}" ${opts.disabled ? 'disabled' : ''}>${label}</button>${opts.below || ''}</div>`;
+
+const screens = {
+  welcome: () => `<div class="welcome gutter">
+    <div class="wordmark"><b>S</b>Sorted</div>
+    <h1>Next week's food, planned and in your basket.</h1>
+    <p>Sorted reads your calendar, plans meals that hit your macros, checks what you already have and fills your supermarket basket. You approve it.</p>
+    <div class="compare"><div><span class="small">Doing it yourself</span><strong>~90 min</strong></div><div class="after"><span class="small">With Sorted</span><strong>~2 min</strong></div></div>
+    <div class="chain">${['Pick meals','Check calendar','Hit macros','Write the list','Check cupboards','Find products','Handle swaps','Book a slot'].map(s => `<span>${s}</span>`).join('')}</div>
+    <div style="flex:1"></div>
+    <button class="btn" data-a="go" data-to="you">Get started</button>
+    <p class="proto">Prototype · sample calendar, store and prices</p></div>`,
+
+  you: () => `${header('About you', 'welcome', 1)}<div class="scroll gutter">
+    <div class="lede"><h1>Who are we feeding?</h1><p>You can change all of this later.</p></div>
+    <div class="card row"><div class="grow"><strong>People</strong><p class="small muted">Quantities scale to match</p></div>
+      <div class="stepper"><button data-a="hh" data-d="-1" aria-label="Fewer people">−</button><strong class="num">${S.household}</strong><button data-a="hh" data-d="1" aria-label="More people">+</button></div></div>
+    <div class="stack"><span class="label">Meals to plan</span>
+      ${[['dinners','Dinners only','Plan dinners; you sort the rest.'],['staples','Dinners + staples','Plan dinners, and add breakfast and lunch staples to the list and your macros.'],['all','Every meal','Plan breakfast, lunch and dinner.']].map(([v, t, d]) =>
+        `<button class="option ${S.meals === v ? 'on' : ''}" data-a="meals" data-v="${v}" ${v === 'all' ? 'disabled' : ''}><span class="radio"></span><span><strong>${t}${v === 'staples' ? '<span class="tag">Recommended</span>' : ''}${v === 'all' ? '<span class="tag">Coming soon</span>' : ''}</strong><span class="small muted">${d}</span></span></button>`).join('')}</div>
+    <div class="stack"><span class="label">Dietary requirements</span>
+      <div class="chips">${DIETS.map(d => `<button class="chip ${S.diet.includes(d) ? 'on' : ''}" data-a="diet" data-v="${d}">${d}</button>`).join('')}</div></div>
+  </div>${cta('Continue', 'macros')}`,
+
+  macros: () => { const t = targets(), c = S.preset === 'custom';
+    return `${header('Your macros', 'you', 2)}<div class="scroll gutter">
+    <div class="lede"><h1>What are you aiming for?</h1><p>Daily targets. We also track a weekly average, so one heavier day can balance a lighter one.</p></div>
+    <div class="presets">${Object.entries(PRESETS).map(([k, p]) => `<button class="preset ${S.preset === k ? 'on' : ''}" data-a="preset" data-v="${k}"><strong>${p.name}</strong><span class="small muted">${p.desc}</span></button>`).join('')}</div>
+    <div class="card stack"><span class="label">Daily targets${c ? ' · tap to edit' : ''}</span>
+      <div class="targets">${[['k','kcal'],['p','protein g'],['f','fat g'],['c','carbs g']].map(([k, l]) =>
+        `<label class="target"><input id="t-${k}" inputmode="numeric" data-k="${k}" value="${t[k]}" ${c ? '' : 'disabled'} aria-label="${l}"><span>${l}</span></label>`).join('')}</div></div>
+  </div>${cta('Continue', 'connect')}`; },
+
+  connect: () => `${header('Connect', 'macros', 3)}<div class="scroll gutter">
+    <div class="lede"><h1>Plug in your week</h1><p>Your calendar shows which nights you're cooking. Your supermarket is where the basket goes.</p></div>
+    <div class="stack"><span class="label">Calendar</span>
+      ${[['Google Calendar','#1A73E8','G'],['Outlook','#0F6CBD','O']].map(([n, col, l]) => `<button class="connect ${S.cal === n ? 'on' : ''}" data-a="cal" data-v="${n}">
+        <span class="logo" style="background:${col}">${l}</span><span class="grow"><strong>${n}</strong>${S.cal === n ? '<span class="small muted" style="display:block">Read 6 events for next week</span>' : ''}</span>
+        <span class="state">${S.cal === n ? 'Connected ✓' : 'Connect'}</span></button>`).join('')}</div>
+    <div class="stack"><span class="label">Supermarket</span>
+      <div class="stores">${STORES.map(([n, col]) => `<button class="store ${S.store === n ? 'on' : ''}" data-a="store" data-v="${n}">
+        <span class="logo" style="background:${col}">${n[0]}</span><strong>${n}</strong><span class="small ${S.store === n ? 'state' : 'muted'}">${S.store === n ? 'Connected ✓' : 'Tap to connect'}</span></button>`).join('')}</div></div>
+    <p class="hint">Prototype: no real accounts are connected.</p>
+  </div>${cta('Plan my week', 'loading', { disabled: !S.cal || !S.store, below: !S.cal || !S.store ? '<p class="hint">Connect a calendar and a supermarket to continue</p>' : '' })}`,
+
+  loading: () => { const out = DAYS.filter(d => S.status[d.k] === 'out' || S.status[d.k] === 'away').length;
+    const tasks = [
+      ['Reading your calendar', `6 events next week. ${out} nights out or away, 1 late night.`],
+      ['Choosing dinners', `${Object.keys(S.plan).length} dinners for ${targets() === S.custom ? 'your custom' : PRESETS[S.preset].name.toLowerCase()} targets${S.diet.length ? ', ' + S.diet.join(', ').toLowerCase() : ''}.`],
+      ['Building your list', 'Merging ingredients and scaling for ' + S.household + (S.household > 1 ? ' people.' : ' person.')],
+      ['Checking your cupboards', 'Using your last few orders to guess what you already have.']
+    ];
+    return `<div class="loading gutter"><div class="pulse">${ICON.spark}</div>
+      <div class="lede"><h1>Sorting your week…</h1></div>
+      <div class="tasks">${tasks.map(([t, d], i) => `<div class="task" id="task${i}"><span class="tick"></span><span><strong>${t}</strong><span class="small muted">${d}</span></span></div>`).join('')}</div></div>`; },
+
+  week: () => { const cook = DAYS.filter(d => cooking(d.k)).length;
+    return `${header('Next week', 'connect')}<div class="scroll gutter">
+    <div class="lede"><h1>Here's how your week looks</h1><p>Mon 2 – Sun 8 Nov, from your ${S.cal}. Tap a day to change it.</p></div>
+    <div class="summary"><div><strong class="num">${cook}</strong><span class="small muted">nights cooking</span></div><div><strong class="num">${DAYS.length - cook}</strong><span class="small muted">out or away</span></div></div>
+    ${DAYS.map(d => `<button class="day ${cooking(d.k) ? '' : 'off'}" data-a="sheet" data-type="day" data-k="${d.k}">
+      <span class="date"><span>${d.d}</span><b class="num">${d.n}</b></span>
+      <span class="grow"><span class="pill ${S.status[d.k]}">${STATUS[S.status[d.k]]}</span>
+        ${d.ev ? `<span class="event">${ICON.cal}${d.ev}</span>` : ''}
+        <span class="why" style="display:block">${S.why[d.k]}</span></span>
+      <span class="edit">Change</span></button>`).join('')}
+  </div>${cta('Plan my meals', 'plan')}`; },
+
+  plan: () => { const t = targets(), w = weekScore(), pct = w.p / t.p;
+    return `${header('Meal plan', 'week')}<div class="scroll gutter">
+    <div class="score">${ring(pct, 92, 10, 'var(--sun)', Math.round(pct * 100) + '%')}
+      <div class="grow"><h3>${pct >= .93 ? 'On track this week' : 'A little under on protein'}</h3>
+        <div class="bars">${[['Protein','p','g'],['Calories','k',''],['Fat','f','g']].map(([l, k, u]) =>
+          `<div class="bar"><span>${l}</span><i><b style="width:${Math.min(100, w[k] / t[k] * 100)}%"></b></i><span class="num">${Math.round(w[k])}/${t[k]}${u}</span></div>`).join('')}</div>
+        <p class="small" style="opacity:.8;margin-top:6px">Daily average across ${w.n} cooking days${w.over ? `, ${w.over} over on fat` : ', fat under your limit'}.</p></div></div>
+    ${DAYS.map(d => { const id = S.plan[d.k];
+      if (!id) return `<div class="offday"><b>${d.d}</b>${cooking(d.k) ? 'No recipe matches your diet for this night' : STATUS[S.status[d.k]] + (d.ev ? ' · ' + d.ev : '')}</div>`;
+      const r = RECIPES[id], dm = dayMacros(d.k);
+      return `<div class="meal"><div class="thumb" style="background:${r.tint}">${r.e}</div>
+        <div class="grow"><span class="daylabel">${d.d} ${d.n} · ${r.mins} min${S.status[d.k] === 'quick' ? ' · quick night' : ''}</span><h3>${r.name}</h3>
+          <div class="macros num"><span><i style="background:var(--protein)"></i>${r.m.p}g P</span><span><i style="background:var(--carbs)"></i>${r.m.c}g C</span><span><i style="background:var(--fat)"></i>${r.m.f}g F</span><span class="muted">${r.m.k} kcal</span></div>
+          <button class="swapbtn" data-a="sheet" data-type="swap" data-k="${d.k}">Swap</button></div>
+        <div style="text-align:center;color:var(--protein)">${ring(dm.p / t.p, 50, 6, 'var(--protein)', Math.round(dm.p))}<div class="small muted" style="font-size:11px">protein/day</div></div></div>`; }).join('')}
+    ${S.meals === 'staples' ? `<div class="card staples"><span class="label">Daily staples · counted in your macros</span>
+      ${STAPLES.meals.map(([n, k, p]) => `<div class="staple"><span>${n}</span><span class="muted num">${p}g P · ${k} kcal</span></div>`).join('')}</div>` : ''}
+  </div>${cta('Build my shopping list', 'list')}`; },
+
+  list: () => { const items = listItems(), maybe = items.filter(i => i.reason), need = items.filter(i => !hasIt(i));
+    const groups = Object.keys(AISLES).map(a => [a, need.filter(i => i.aisle === a)]).filter(([, l]) => l.length);
+    const left = need.filter(i => !S.got[i.name]).length;
+    return `${header('Shopping list', 'plan')}<div class="scroll gutter">
+    <div class="lede"><h1>${left} things to buy</h1><p>Merged from ${Object.keys(S.plan).length} recipes${S.meals === 'staples' ? ' and your staples' : ''}, scaled for ${S.household} ${S.household > 1 ? 'people' : 'person'}. Tick anything you already have.</p></div>
+    <div class="card"><span class="label">You probably have these</span>
+      ${maybe.map(i => `<div class="have"><div class="grow"><strong>${cap(i.name)}</strong> <span class="small muted num">${qty(i.q, i.u)}</span><p class="reason">${i.reason}</p></div>
+        <div class="toggle"><button class="${hasIt(i) ? 'on' : ''}" data-a="have" data-v="${i.name}" data-on="1">Got it</button><button class="${hasIt(i) ? '' : 'on'}" data-a="have" data-v="${i.name}" data-on="0">Need it</button></div></div>`).join('')}</div>
+    ${groups.map(([a, list]) => `<div class="card"><div class="aisle"><span class="label">${AISLES[a]} ${a}</span><span class="small muted num">${list.length}</span></div>
+      ${list.map(i => `<button class="item ${S.got[i.name] ? 'got' : ''}" data-a="got" data-v="${i.name}" style="width:100%;text-align:left">
+        <span class="check"></span><span class="grow"><span style="font-weight:600">${cap(i.name)}</span><span class="small muted" style="display:block">${[...i.uses].join(' · ')}</span></span>
+        <span class="qty">${qty(i.q, i.u)}</span></button>`).join('')}</div>`).join('')}
+  </div>${cta(`Fill my ${S.store} basket`, 'basket')}`; },
+
+  basket: () => { const lines = basket(), pend = lines.filter(l => l.state === 'pending'), sd = salmonDay();
+    const yogPending = pend.some(l => l.name === 'greek yoghurt'), anim = !S.filled;
+    let decisions = '';
+    if (sd) { const alt = swapTarget(sd.k), a = RECIPES[alt], c = RECIPES.salmon;
+      decisions += `<div class="decision"><span class="label" style="color:var(--warn)">Meal affected</span>
+        <h3>There's no salmon in stock, so ${sd.d}'s Miso salmon can't be made.</h3>
+        ${a ? `<div class="compare-meal"><div class="thumb" style="background:${a.tint}">${a.e}</div><div class="grow"><strong>${a.name}</strong>
+          <div class="delta num">${a.m.p}g protein <span class="${a.m.p >= c.m.p ? 'good' : ''}">(${a.m.p >= c.m.p ? '+' : ''}${a.m.p - c.m.p}g)</span> · ${a.m.f}g fat <span class="${a.m.f <= c.m.f ? 'good' : ''}">(${a.m.f - c.m.f > 0 ? '+' : ''}${a.m.f - c.m.f}g)</span> · ${a.mins} min</div></div></div>` : ''}
+        <div class="opts">${a ? `<button class="mini" data-a="mealswap" data-v="${alt}" data-k="${sd.k}">Swap the meal</button>` : ''}<button class="mini alt" data-a="mealdrop" data-k="${sd.k}">Skip ${sd.d}'s dinner</button></div></div>`; }
+    if (yogPending) { const o = OOS['greek yoghurt'];
+      decisions += `<div class="decision"><span class="label" style="color:var(--warn)">Out of stock</span>
+        <h3>Greek yoghurt is out. Swap it for ${o.prod}?</h3><p class="small">${o.why} Your macros stay on target.</p>
+        <div class="opts"><button class="mini" data-a="yog" data-v="sub">Use skyr</button><button class="mini alt" data-a="yog" data-v="skip">Leave it out</button></div></div>`; }
+    return `${header(`${S.store} basket`, 'list')}<div class="scroll gutter">
+    <div id="filling" class="card stack" ${anim ? '' : 'hidden'}><div class="row"><div class="pulse" style="width:36px;height:36px;border-radius:12px">${ICON.spark.replace('<svg', '<svg style="width:18px;height:18px"')}</div>
+      <div class="grow"><strong>Filling your basket</strong><p class="small muted" id="fillmsg">Finding products…</p></div></div><div class="progress"><b id="bar"></b></div></div>
+    <div id="after" class="stack" ${anim ? 'hidden' : ''}>
+      ${pend.length ? `<div class="lede"><h1>${pend.length === 1 ? '1 thing needs' : pend.length + ' things need'} you</h1><p>Everything else is in the basket.</p></div>` : `<div class="lede"><h1>Basket ready</h1><p>${lines.length} products from your list.</p></div>`}
+      ${decisions}</div>
+    <div class="card"><div id="lines">${lines.map(l => `<div class="line ${anim ? 'hide' : ''} ${l.fresh ? 'pop' : ''}"><span class="dot">${AISLES[l.aisle]}</span>
+      <span class="grow"><span style="font-weight:600">${l.prod}</span>${l.state === 'pending' ? '<span class="flag oos">Out of stock</span>' : ''}${l.state === 'auto' || l.state === 'subbed' ? '<span class="flag sub">Swapped</span>' : ''}${l.fresh ? '<span class="flag new">New</span>' : ''}
+        <span class="small muted" style="display:block">${l.note || 'For ' + l.name}</span></span>
+      <span class="price">${l.packs > 1 ? `<span class="small muted">${l.packs} × </span>` : ''}${l.state === 'pending' ? '–' : gbp(l.price * l.packs)}</span></div>`).join('')}</div></div>
+  </div>${cta(pend.length ? `Sort ${pend.length === 1 ? 'the item' : pend.length + ' items'} above first` : `Choose delivery · ${gbp(total(lines))}`, 'slot', { disabled: pend.length || anim,
+      above: `<div class="totals"><span class="muted">${lines.filter(l => l.state !== 'pending').length} products</span><strong class="num">${gbp(total(lines))}</strong></div>` })}`; },
+
+  slot: () => { const [sd, st] = S.slot.split('|'), fee = SLOTS.find(x => x.day === sd).s.find(x => x[0] === st)[1];
+    return `${header('Delivery', 'basket')}<div class="scroll gutter">
+    <div class="lede"><h1>When should it arrive?</h1></div>
+    <div class="rec">${ICON.spark}<div><strong>Sunday 6–7pm</strong><p class="small">You're home all evening, and it arrives the night before your first cooking day.</p></div></div>
+    ${SLOTS.map(day => `<div class="stack"><div class="row"><span class="label grow">${day.day}</span><span class="small muted">${day.ev}</span></div>
+      <div class="slots">${day.s.map(([t, f, kind, note]) => { const id = day.day + '|' + t;
+        return `<button class="slot ${kind || ''} ${S.slot === id ? 'on' : ''}" data-a="slot" data-v="${id}" ${kind === 'full' ? 'disabled' : ''}>
+          <strong>${t}</strong><small>${kind === 'rec' ? '<span class="star">★ Recommended</span> · ' : ''}${note && kind !== 'rec' ? note + ' · ' : ''}${gbp(f)}</small></button>`; }).join('')}</div></div>`).join('')}
+  </div>${cta(`Place order · ${gbp(total(basket()) + fee)}`, 'done')}`; },
+
+  done: () => { const lines = basket(), [sd, st] = S.slot.split('|'), fee = SLOTS.find(x => x.day === sd).s.find(x => x[0] === st)[1], w = weekScore();
+    return `<div class="scroll gutter" style="padding-top:22px">
+    <div class="done-hero"><span class="label" style="color:var(--brand-ink);opacity:.75">Order placed · prototype</span>
+      <span class="big">~90 min</span><h2 style="font-size:22px">saved this week</h2>
+      <p style="opacity:.85">Your ${S.store} order arrives ${sd}, ${st}.</p></div>
+    <div class="stats"><div><strong class="num">${lines.length}</strong><span class="small muted">products</span></div><div><strong class="num">${gbp(total(lines) + fee)}</strong><span class="small muted">incl. delivery</span></div><div><strong class="num">${Math.round(w.p)}g</strong><span class="small muted">protein/day</span></div></div>
+    <div class="card"><span class="label">Your week</span><div style="margin-top:6px">
+      ${DAYS.map(d => `<div class="weekrow"><b>${d.d}</b><span class="grow">${S.plan[d.k] ? RECIPES[S.plan[d.k]].e + ' ' + RECIPES[S.plan[d.k]].name : `<span class="muted">${STATUS[S.status[d.k]]}</span>`}</span></div>`).join('')}</div></div>
+  </div><div class="cta gutter"><button class="btn" data-a="restart">Start again</button></div>`; }
+};
+
+/* ---------- Sheets ---------- */
+function sheetHtml() {
+  const sh = S.sheet; if (!sh) return '';
+  const d = DAYS.find(x => x.k === sh.k);
+  if (sh.type === 'day') return `<div class="scrim" data-a="close"><div class="sheet gutter" data-stop>
+    <span class="grab"></span><h3>${d.d} ${d.n} Nov</h3>${d.ev ? `<p class="event" style="margin:0">${ICON.cal}${d.ev}</p>` : ''}
+    ${Object.entries(STATUS).map(([k, l]) => `<button class="option ${S.status[d.k] === k ? 'on' : ''}" data-a="status" data-k="${d.k}" data-v="${k}"><span class="radio"></span><span><strong>${l}</strong><span class="small muted">${
+      { cook: 'Plan a full dinner', quick: 'Plan something that takes 20 minutes or less', out: 'No dinner. Staples still count.', away: 'Nothing planned or bought for this day' }[k]}</span></span></button>`).join('')}</div></div>`;
+  const cur = RECIPES[S.plan[sh.k]], used = new Set(Object.values(S.plan));
+  const alts = ORDER.filter(id => fits(id, sh.k) && !used.has(id)).sort((a, b) => Math.abs(RECIPES[a].m.p - cur.m.p) - Math.abs(RECIPES[b].m.p - cur.m.p)).slice(0, 4);
+  const delta = (a, b, good) => { const v = a - b; return `<span class="${good(v) ? 'good' : ''}">${v > 0 ? '+' : ''}${v}g</span>`; };
+  return `<div class="scrim" data-a="close"><div class="sheet gutter" data-stop>
+    <span class="grab"></span><h3>Swap ${d.d}'s dinner</h3><p class="small muted">Sorted by how close they keep you to your protein target.</p>
+    ${alts.map(id => { const r = RECIPES[id]; return `<button class="meal" data-a="swap" data-k="${sh.k}" data-v="${id}" style="width:100%;text-align:left">
+      <div class="thumb" style="background:${r.tint};width:52px;height:52px;font-size:26px">${r.e}</div><div class="grow"><h3 style="font-size:15px">${r.name}</h3>
+      <div class="delta num muted">${r.mins} min · protein ${delta(r.m.p, cur.m.p, v => v >= 0)} · fat ${delta(r.m.f, cur.m.f, v => v <= 0)}</div></div></button>`; }).join('') || '<p class="muted">No other recipes fit this night.</p>'}</div></div>`;
+}
+
+/* ---------- Render + events ---------- */
+const app = document.getElementById('app');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let timers = [];
+function render(keepScroll) {
+  const sc = app.querySelector('.scroll'), y = keepScroll && sc ? sc.scrollTop : 0;
+  timers.forEach(clearTimeout); timers = [];
+  app.innerHTML = screens[S.screen]() + sheetHtml();
+  const ns = app.querySelector('.scroll'); if (ns) ns.scrollTop = y;
+  if (S.screen === 'loading') runLoading();
+  if (S.screen === 'basket' && !S.filled) runFill();
+}
+function go(to) { S.screen = to; S.sheet = null; if (to === 'loading' || to === 'week') fillPlan(); render(); }
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; app.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+function runLoading() {
+  const step = reduced ? 150 : 800;
+  [0, 1, 2, 3].forEach(i => timers.push(setTimeout(() => {
+    const el = document.getElementById('task' + i); if (el) el.classList.add('done');
+  }, step * (i + 1))));
+  timers.push(setTimeout(() => go('week'), step * 5));
+}
+function runFill() {
+  const rows = [...app.querySelectorAll('#lines .line')], bar = document.getElementById('bar'), msg = document.getElementById('fillmsg');
+  const gap = reduced ? 10 : 110;
+  rows.forEach((r, i) => timers.push(setTimeout(() => {
+    r.classList.remove('hide'); r.classList.add('pop');
+    bar.style.width = ((i + 1) / rows.length * 100) + '%';
+    msg.textContent = `Added ${i + 1} of ${rows.length}: ${r.querySelector('.grow > span').textContent}`;
+  }, gap * (i + 1))));
+  timers.push(setTimeout(() => { S.filled = true; render(); }, gap * (rows.length + 4)));
+}
+
+app.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]');
+  if (!el) return;
+  if (el.dataset.a === 'close' && e.target.closest('[data-stop]')) return;
+  const { a, to, v, k } = el.dataset;
+  switch (a) {
+    case 'go': return go(to);
+    case 'hh': S.household = Math.max(1, Math.min(8, S.household + +el.dataset.d)); break;
+    case 'meals': S.meals = v; break;
+    case 'diet': S.diet = S.diet.includes(v) ? S.diet.filter(x => x !== v) : [...S.diet, v]; break;
+    case 'preset': S.preset = v; break;
+    case 'cal': S.cal = v; break;
+    case 'store': S.store = v; break;
+    case 'sheet': S.sheet = { type: el.dataset.type, k }; break;
+    case 'close': S.sheet = null; break;
+    case 'status':
+      S.status[k] = v; S.why[k] = 'You changed this. ' + { cook: 'A full dinner is planned.', quick: 'Picking something quick.', out: 'No dinner planned.', away: 'Nothing planned or bought.' }[v];
+      S.sheet = null; fillPlan(); break;
+    case 'swap': S.plan[k] = v; S.sheet = null; toast(`${DAYS.find(d => d.k === k).d}: ${RECIPES[v].name}`); break;
+    case 'have': S.have[v] = el.dataset.on === '1'; break;
+    case 'got': S.got[v] = !S.got[v]; break;
+    case 'yog': S.yog = v; toast(v === 'sub' ? 'Swapped to skyr' : 'Greek yoghurt removed'); break;
+    case 'mealswap': {
+      const before = new Set(basket().map(l => l.name));
+      S.swapped = true; S.plan[k] = v;
+      S.newItems = basket().map(l => l.name).filter(n => !before.has(n));
+      toast(`${DAYS.find(d => d.k === k).d} is now ${RECIPES[v].name}. Plan and list updated.`); break;
+    }
+    case 'mealdrop':
+      S.swapped = true; S.status[k] = 'out'; S.why[k] = 'No salmon in stock, so you skipped this dinner.'; fillPlan();
+      toast('Dinner removed and list updated'); break;
+    case 'slot': S.slot = v; break;
+    case 'restart': S = fresh(); break;
+  }
+  render(true);
+});
+app.addEventListener('input', e => {
+  if (e.target.dataset.k) S.custom[e.target.dataset.k] = Math.max(0, parseInt(e.target.value, 10) || 0);
+});
+render();
+</script>
